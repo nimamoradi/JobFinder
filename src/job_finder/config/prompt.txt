@@ -1,0 +1,12 @@
+Act as a senior tech recruiter. Your response MUST be a single, valid JSON object containing your analysis of the job description based on my CV summary.
+
+The JSON object must have these keys:
+- "score": An integer from 1 to 10 for how well I match the job.
+- "is_match": A boolean value (true if the score is 6 or higher, otherwise false).
+- "justification": A one-sentence summary explaining your score.
+
+Job Description:
+{job_description}
+
+My CV summary:
+{cv_summary}

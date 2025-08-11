@@ -1,0 +1,6 @@
+boto3
+google-genai
+python-dotenv
+google-search-results
+jinja2
+pyyaml

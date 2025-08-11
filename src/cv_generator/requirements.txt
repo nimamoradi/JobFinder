@@ -1,0 +1,4 @@
+boto3
+google-genai
+jinja2
+pyyaml

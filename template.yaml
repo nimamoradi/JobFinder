@@ -1,0 +1,134 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  A serverless application to find jobs, generate tailored CVs, and send a daily summary email.
+
+Parameters:
+  SerpApiKey:
+    Type: String
+    NoEcho: true
+    Description: Your API key from SerpApi.
+  GeminiApiKey:
+    Type: String
+    NoEcho: true
+    Description: Your API key for the Google Gemini model.
+  VerifiedEmail:
+    Type: String
+    Description: The email address you have verified with SES.
+
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 256
+    Runtime: python3.12
+    Architectures:
+      - x86_64
+    Environment:
+      Variables:
+        DYNAMODB_TABLE_NAME: !Ref JobsTable
+        GEMINI_API_KEY: !Ref GeminiApiKey
+
+Resources:
+  # --- AWS Resources ---
+  JobsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: Jobs
+      AttributeDefinitions:
+        - AttributeName: jobId   # Primary Key
+          AttributeType: S
+        - AttributeName: jobType # The key for your GSI
+          AttributeType: S
+      KeySchema:
+        - AttributeName: jobId
+          KeyType: HASH
+      BillingMode: PAY_PER_REQUEST
+      GlobalSecondaryIndexes:
+        - IndexName: JobTypeIndex # Your index for counting by type
+          KeySchema:
+            - AttributeName: jobType
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  JobsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 300
+  EmailQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      VisibilityTimeout: 300 # 5 minutes
+
+  VerifiedEmailIdentity:
+    Type: AWS::SES::EmailIdentity
+    Properties:
+      EmailIdentity: !Ref VerifiedEmail
+
+  # --- Lambda Functions ---
+  JobFinderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/job_finder/
+      Handler: app.lambda_handler
+      Environment:
+        Variables:
+          SQS_QUEUE_URL: !Ref JobsQueue
+          SERPAPI_API_KEY: !Ref SerpApiKey
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt JobsQueue.QueueName
+
+  CVGeneratorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/cv_generator/
+      Handler: app.lambda_handler
+      Events:
+        JobQueueTrigger:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt JobsQueue.Arn
+            BatchSize: 1 # Process one job at a time
+            MaximumBatchingWindowInSeconds: 300
+      Environment:
+        Variables:
+          EMAIL_QUEUE_URL: !Ref EmailQueue
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref JobsTable
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt EmailQueue.QueueName
+
+
+  EmailAggregatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: src/email_aggregator/
+      Handler: app.lambda_handler
+      Timeout: 300 # Give it up to 5 minutes to process all messages
+      Environment:
+        Variables:
+          SENDER_EMAIL: !Ref VerifiedEmail
+          RECIPIENT_EMAIL: !Ref VerifiedEmail
+          EMAIL_QUEUE_URL: !Ref EmailQueue # <-- Give it the queue URL
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action:
+                - ses:SendRawEmail
+              Resource: !Sub "arn:${AWS::Partition}:ses:us-east-2:${AWS::AccountId}:identity/${VerifiedEmail}"
+        - SQSPollerPolicy:
+            QueueName: !GetAtt EmailQueue.QueueName
+
+
+
+Outputs:
+  JobsTableName:
+    Description: "Name of the DynamoDB table for jobs"
+    Value: !Ref JobsTable
+  JobsQueueUrl:
+    Description: "URL of the SQS queue for processing jobs"
+    Value: !Ref JobsQueue
