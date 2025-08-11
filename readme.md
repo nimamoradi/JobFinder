@@ -42,7 +42,6 @@ sam deploy --guided
 
 Architecture Diagram
 
-GitHub will automatically render the code block below as a visual diagram.
 
 ```mermaid
 graph TD
