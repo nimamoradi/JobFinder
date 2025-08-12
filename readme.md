@@ -13,16 +13,14 @@ Follow these steps to get the application running.
 Before starting, you need:
 - An **AWS Account** with the **SAM CLI** installed.
 - API keys for **SerpApi** and **Google Gemini**.
-- An email address **verified in Amazon SES** to send and receive notifications.
+- An email address to be **verified in Amazon SES** so it receive notifications.
 
 ### 2. Configure Your CV Summary
 
 The application uses a summary of your CV to tailor applications. You must create this file before deploying.
 
--   Create a directory named `config` inside `src/job_finder/`.
--   Create another directory named `config` inside `src/cv_generator/`.
--   In **both** of those `config` directories, create a file named `cv_summary.txt`.
--   Inside `cv_summary.txt`, paste a plain text summary of your professional skills and experience.
+-   In **both** of those `config` directories of `src/cv_generator/` and  `src/job_finder/`, create a file named `cv_summary.txt`.
+-   Inside `cv_summary.txt`, put a plain text summary of your professional skills and experience.
 
 ### 3. Deploy the Application
 
