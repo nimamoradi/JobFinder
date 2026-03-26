@@ -1,11 +1,17 @@
 import json
 import os
+import re
 
 from google import genai
 
-from gen_ai.llm_interface import extract_json_content, LLM_interface
+# Support both package layouts:
+# - CodeUri: src/cv_generator (imports like 'gen_ai.*')
+# - CodeUri: src (imports like 'cv_generator.gen_ai.*')
+try:
+    from gen_ai.llm_interface import extract_json_content, LLM_interface
+except ModuleNotFoundError:
+    from cv_generator.gen_ai.llm_interface import extract_json_content, LLM_interface
 
-import re
 
 def escape_latex(text: str) -> str:
     """
@@ -34,18 +40,19 @@ def escape_latex_in_json(data):
         return [escape_latex_in_json(element) for element in data]
     elif isinstance(data, str):
         return escape_latex(data)
-    else: # For int, float, bool, None, etc.
+    else:  # For int, float, bool, None, etc.
         return data
+
+
 class AskGemini(LLM_interface):
     def __init__(self, model_name):
-        # Load environment variables from .env file
         super().__init__()
-        # Access environment variables
-        api_key = os.getenv('gemini_api_key')
+        api_key = os.getenv('GEMINI_API_KEY') or os.getenv('gemini_api_key')
+        if not api_key:
+            raise ValueError('Gemini API key is not set. Use GEMINI_API_KEY or gemini_api_key.')
         self._client = genai.Client(api_key=api_key)
         self._model_name = model_name
 
-    # The final, unified 'ask' method
     def ask(self, prompt, be_json=False):
         """
         Sends a prompt to the Gemini API and returns a LaTeX-safe response.
@@ -60,16 +67,9 @@ class AskGemini(LLM_interface):
         )
 
         if be_json:
-            # 1. Parse the JSON string into a Python object.
-            #    (Assuming you have an extract_json_content function)
             parsed_json = json.loads(extract_json_content(response.text))
-
-            # 2. Recursively escape all string values within the parsed object
-            #    and return the result.
             return escape_latex_in_json(parsed_json)
-        else:
-            # If raw text is expected, just escape the entire text response.
-            return escape_latex(response.text)
+        return escape_latex(response.text)
 
     def swap_model(self, model_name):
         self._model_name = model_name

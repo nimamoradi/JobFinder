@@ -1,46 +1,54 @@
+\
 cv_in_latex = r"""
 \documentclass{muratcan_cv}
 \usepackage{tasks}
-\setname^^; {{ my_name }} ^^= ^^; {{ my_family }} ^^=
-\setposition^^; {{ my_position }} ^^={}
-\setaddress^^; {{ my_address }} ^^=
-\setmobile^^; {{ my_phone }} ^^=
-\setmail^^; {{ my_email }} ^^=
+\usepackage[scaled]{helvet}
+\renewcommand{\familydefault}{\sfdefault}
 
-\setlinkedinaccount^^; {{ my_linkedin }} ^^=
-\setgithubaccount^^; {{ my_github }} ^^=
+% Basic information
+\setname{ {{ my_name }} }{ {{ my_family }} }
+\setposition{ {{ my_position }} }{}
+\setaddress{ {{ my_address }} }
+\setmobile{ {{ my_phone }} }
+\setmail{ {{ my_email }} }
+
+\setlinkedinaccount{ {{ my_linkedin }} }
+\setgithubaccount{ {{ my_github }} }
 \setthemecolor{MidnightBlue}
 
-    
 \begin{document}
 
-%Create header
 \headerview
-\vspace{1ex} % white space
-%
-\section{Career Summary} 
-\explanationdetail{\hspace{2ex}
- {{bullet_list}}
-\bigskip
+
+\section{Professional Summary}
+\explanationdetail{
+{{ bullet_list }}
 }
-   
 
 \section{Experience}
-    {{experience_text}} 
-%
+{{ experience_text }}
 
-% 
+{% if categorized_skills %}
+\section{Skills}
+\explanationdetail{
+{% for category, skills_list in categorized_skills.items() %}
+\textbf{ {{ category }}:} {{ skills_list | join(', ') }}{% if not loop.last %} \\
+{% endif %}
+{% endfor %}
+}
+{% endif %}
 
-\section{Education} 
+\section{Education}
 {% for entry in education -%}
-  \datedexperience^^;{{ entry.degree }}^^=^^;{{ entry.dates }}^^=
-    \explanation^^;{{ entry.institution }}^^=^^;{{ entry.location }}^^=
-    \explanationdetail^^;
-            {{ entry.details }}
-^^=
+\datedexperience{ {{ entry.degree }} }{ {{ entry.dates }} }
+\explanation{ {{ entry.institution }} }{ {{ entry.location }} }
+\explanationdetail{
+    {{ entry.details }}
+}
 {%- endfor %}
 
-{{certifications}}
+{{ certifications }}
+
 \end{document}
 """
 
@@ -60,41 +68,37 @@ Coverletter_in_latex = r"""
 \definecolor{gr}{RGB}{236,236,236}
 
 % Personal information
-\newcommand{\myname}^^; {{ my_name }} ^^=
+\newcommand{\myname}{ {{ my_name }} }
 \newcommand{\mytitle}{Applicant}
-\newcommand{\myemail}^^; {{ my_email }} ^^=
-\newcommand{\mylinkedin}^^; {{ my_linkedin }} ^^=
-\newcommand{\myphone}^^; {{ my_phone }} ^^=
-\newcommand{\mylocation}^^; {{ my_address }} ^^=
+\newcommand{\myemail}{ {{ my_email }} }
+\newcommand{\mylinkedin}{ {{ my_linkedin }} }
+\newcommand{\myphone}{ {{ my_phone }} }
+\newcommand{\mylocation}{ {{ my_address }} }
 \newcommand{\recipient}{Hiring Manager}
 \newcommand{\greeting}{Dear}
 \newcommand{\closer}{Kind Regards}
 
 % Company information
-\newcommand{\company}^^; {{ the_company }} ^^=
-
+\newcommand{\company}{ {{ the_company }} }
 
 \begin{document}
 
-% Shaded header banner
 \AddToShipoutPictureBG{
     \color{gr}
-    \AtPageUpperLeft{\rule[-2in]{\paperwidth}^^;2in^^=}
+    \AtPageUpperLeft{\rule[-2in]{\paperwidth}{2in}}
 }
 
-% Header
 \begin{center}
 {\fontsize{28}{0}\selectfont\scshape \myname}
 
 \href{mailto:\myemail}{\faEnvelope\enspace \myemail}\hfill
-\href{https://linkedin.com/in/\mylinkedin}{\faLinkedinSquare linkedin.com/in/\mylinkedin}\newline
+\href{https://www.\mylinkedin}{\faLinkedinSquare \mylinkedin}\newline
 \href{tel:\myphone}{\faPhone\enspace \myphone}\hfill
 \faMapMarker\enspace \mylocation
 \end{center}
 
 \vspace{0.2in}
 
-% Opening block
 \today\\
 
 \vspace{-0.1in}\recipient\\
@@ -102,18 +106,16 @@ Coverletter_in_latex = r"""
 
 \vspace{-0.1in}\greeting\ \recipient,\\
 
-% Body
 \vspace{-0.1in}\setlength\parindent{24pt}
-{{cover_letter_text}}
+{{ cover_letter_text }}
 
-% Closer
 \vspace{0.1in}
 \vfill
 
 \begin{flushright}
 \closer,
 
-\vspace{-0.1in}\includegraphics[width=1.5in]{signature.png}\vspace{-0.1in}
+\vspace{0.4in}
 
 \myname\\
 \mytitle

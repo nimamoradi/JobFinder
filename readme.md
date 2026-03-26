@@ -15,12 +15,12 @@ Before starting, you need:
 - API keys for **SerpApi** and **Google Gemini**.
 - An email address to be **verified in Amazon SES** so it receive notifications.
 
-### 2. Configure Your CV Summary
+### 2. Configure Your Resume Data
 
-The application uses a summary of your CV to tailor applications. You must create this file before deploying.
+The application needs a resume file plus a short plain-text summary of your experience.
 
--   In **both** of those `config` directories of `src/cv_generator/` and  `src/job_finder/`, create a file named `cv_summary.txt`.
--   Inside `cv_summary.txt`, put a plain text summary of your professional skills and experience.
+-   In `src/cv_generator/config/`, review `resume.yaml`. A sample template is also included as `resume.sample.yaml`.
+-   In **both** `src/cv_generator/config/` and `src/job_finder/config/`, create `cv_summary.txt` from the included `cv_summary.sample.txt` template and customize it with your own experience.
 
 ### 3. Deploy the Application
 
@@ -28,7 +28,7 @@ Clone the repository and use the SAM CLI to build and deploy the AWS resources. 
 
 ```bash
 # Clone the repository
-git clone [https://github.com/nimamoradi/JobFinder.git](https://github.com/nimamoradi/JobFinder.git)
+git clone <your-repo-url>
 cd JobFinder
 
 # Build the application
@@ -37,6 +37,8 @@ sam build
 # Deploy with guided prompts
 sam deploy --guided
 ```
+
+During guided deployment, you can leave `NoCvGen` set to `true` to skip CV generation and email job matches directly, or set it to `false` to generate tailored CVs.
 
 Architecture Diagram
 

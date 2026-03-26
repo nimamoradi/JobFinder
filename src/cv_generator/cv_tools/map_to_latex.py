@@ -89,7 +89,7 @@ def generate_project_latex(project: dict):
     """
     # Generate LaTeX for the bullet points
     bullet_template = r"     \coloredbullet\ {content}"
-    formatted_bullets = "\n    \smallskip\n\n".join(
+    formatted_bullets = "\n    \\smallskip\n\n".join(
         [bullet_template.format(content=bullet) for bullet in project['bullet_points']]
     )
 
@@ -107,17 +107,18 @@ def make_certifications(certs):
     certs_template = r"""
         \bigskip
         \section{Certifications}
-        \begin{itemize}
-          {{items}}
-        \end{itemize}
+            {{items}}
     """
-
-  # \item AWS Certified Solutions Architect Associate \hfill May 2024
-
     items_text = ""
     for cert in certs:
-        items_text += f"    \\item {cert['name']}"
-        items_text += f"    \\hfill {cert['date']}\n"
+        name = cert.get('name', '')
+        date = cert.get('date', '')
+        url = cert.get('url')
+        if url:
+            rendered_name = f"\\href{{{url}}}{{{name}}}"
+        else:
+            rendered_name = name
+        items_text += f"        \\certificationitem{{{rendered_name}}}{{{date}}}\n\n"
     return Template(certs_template).render(items=items_text)
 
 
@@ -169,30 +170,24 @@ def make_single_experience(original_experience: Dict[str, Any], tailored_experie
     position = original_experience.get('position', '')
     location = original_experience.get('location', '')
 
-    latex = f"""\\datedexperience{{{company}}}{{{period}}}
-       \\explanation{{{position}}}{{{location}}}
-       \\explanationdetail{{
-       """
+    latex = f"\\datedexperience{{{company}}}{{{period}}}\n"
+    latex += f"  \\explanation{{{position}}}{{{location}}}\n"
+    latex += "    \\begin{jobbullets}\n"
 
     # Use the tailored bullet points from the LLM response
     for point in tailored_experience.get('bullet_points', []):
-        latex += f"""
-       \\smallskip
-        \\coloredbullet\\ %
-        {sanitize_latex(point)}
-        """
+        latex += "    \\item\n"
+        latex += f"    {sanitize_latex(point)}\n"
 
     # Use the tailored skills string from the LLM response
     skills = tailored_experience.get('skills', '')
     if skills:  # Only add the skills line if skills are present
-        latex += f"""
-       \\smallskip
-        \\skillslearned\\ %
-        {sanitize_latex(skills)}
-        """
+        latex += "    \\smallskip\n"
+        latex += "    \\skillslearned\\ %\n"
+        latex += f"    {sanitize_latex(skills)}\n"
 
-    # Close the explanationdetail section
-    latex += "\n     }"
+    # Close the environment
+    latex += "    \\end{jobbullets}\n"
     return latex
 
 
