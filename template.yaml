@@ -15,6 +15,13 @@ Parameters:
   VerifiedEmail:
     Type: String
     Description: The email address you have verified with SES.
+  NoCvGen:
+    Type: String
+    Default: "true"
+    AllowedValues:
+      - "true"
+      - "false"
+    Description: When true, skip CV generation and send jobs directly to the email queue.
 
 Globals:
   Function:
@@ -29,22 +36,21 @@ Globals:
         GEMINI_API_KEY: !Ref GeminiApiKey
 
 Resources:
-  # --- AWS Resources ---
   JobsTable:
     Type: AWS::DynamoDB::Table
     Properties:
       TableName: Jobs
       AttributeDefinitions:
-        - AttributeName: jobId   # Primary Key
+        - AttributeName: jobId
           AttributeType: S
-        - AttributeName: jobType # The key for your GSI
+        - AttributeName: jobType
           AttributeType: S
       KeySchema:
         - AttributeName: jobId
           KeyType: HASH
       BillingMode: PAY_PER_REQUEST
       GlobalSecondaryIndexes:
-        - IndexName: JobTypeIndex # Your index for counting by type
+        - IndexName: JobTypeIndex
           KeySchema:
             - AttributeName: jobType
               KeyType: HASH
@@ -54,18 +60,18 @@ Resources:
   JobsQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 300
+      VisibilityTimeout: 900
+
   EmailQueue:
     Type: AWS::SQS::Queue
     Properties:
-      VisibilityTimeout: 300 # 5 minutes
+      VisibilityTimeout: 300
 
   VerifiedEmailIdentity:
     Type: AWS::SES::EmailIdentity
     Properties:
       EmailIdentity: !Ref VerifiedEmail
 
-  # --- Lambda Functions ---
   JobFinderFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -73,25 +79,35 @@ Resources:
       Handler: app.lambda_handler
       Environment:
         Variables:
-          SQS_QUEUE_URL: !Ref JobsQueue
+          JOB_QUEUE_URL: !Ref JobsQueue
+          EMAIL_QUEUE_URL: !Ref EmailQueue
           SERPAPI_API_KEY: !Ref SerpApiKey
+          NO_CV_GEN: !Ref NoCvGen
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref JobsTable
         - SQSSendMessagePolicy:
             QueueName: !GetAtt JobsQueue.QueueName
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt EmailQueue.QueueName
 
   CVGeneratorFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/cv_generator/
       Handler: app.lambda_handler
+      Runtime: python3.13
+      Timeout: 900
+      AutoPublishAlias: Live
+      DurableConfig:
+        ExecutionTimeout: 900
+        RetentionPeriodInDays: 7
       Events:
         JobQueueTrigger:
           Type: SQS
           Properties:
             Queue: !GetAtt JobsQueue.Arn
-            BatchSize: 1 # Process one job at a time
+            BatchSize: 10
             MaximumBatchingWindowInSeconds: 300
       Environment:
         Variables:
@@ -102,18 +118,17 @@ Resources:
         - SQSSendMessagePolicy:
             QueueName: !GetAtt EmailQueue.QueueName
 
-
   EmailAggregatorFunction:
     Type: AWS::Serverless::Function
     Properties:
       CodeUri: src/email_aggregator/
       Handler: app.lambda_handler
-      Timeout: 300 # Give it up to 5 minutes to process all messages
+      Timeout: 300
       Environment:
         Variables:
           SENDER_EMAIL: !Ref VerifiedEmail
           RECIPIENT_EMAIL: !Ref VerifiedEmail
-          EMAIL_QUEUE_URL: !Ref EmailQueue # <-- Give it the queue URL
+          EMAIL_QUEUE_URL: !Ref EmailQueue
       Policies:
         - Statement:
             - Effect: Allow
@@ -122,8 +137,6 @@ Resources:
               Resource: !Sub "arn:${AWS::Partition}:ses:us-east-2:${AWS::AccountId}:identity/${VerifiedEmail}"
         - SQSPollerPolicy:
             QueueName: !GetAtt EmailQueue.QueueName
-
-
 
 Outputs:
   JobsTableName:

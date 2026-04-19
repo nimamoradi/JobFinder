@@ -2,3 +2,14 @@ samconfig.toml
 /.venv/
 /.idea/
 /.aws-sam
+
+# Ignore local/personal config data
+src/cv_generator/config/*.yaml
+src/cv_generator/config/*.txt
+src/job_finder/config/*.txt
+src/job_finder/config/data.json
+
+# Keep sample files in the repo
+!src/cv_generator/config/*.sample.yaml
+!src/cv_generator/config/*.sample.txt
+!src/job_finder/config/*.sample.txt

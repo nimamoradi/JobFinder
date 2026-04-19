@@ -1,20 +1,37 @@
 prompt_skills = """
-Act as an HR expert and resume writer with a specialization in creating ATS-friendly resumes.
-Your task is to list additional skills relevant to the job. For each skill, ensure you include:
-Do not add any information beyond what is listed in the provided data fields.Use the information provided in the'skills' fields to formulate your responses have them sorted base on importance to role. Avoid extrapolating or incorporating details from the job description or other external sources.
+Act as an expert resume writer and HR specialist with a deep understanding of Applicant Tracking Systems (ATS).
 
-1. **Specific Skills**: List the specific technical skills or technologies from my skills that best match the job do not include soft skills like Communication leadership or etc.
-2. **Keyword Matching**: Match the wording of each skill to the job description, ensuring ATS compatibility. If a job description uses different terminology for the same skill (e.g., "Database Administration" instead of "Database Management"), adjust the phrasing to match.
-3. **do not make up skills, for example if my skills include Java, do think i know Lua or Rust even if needed for the job.
-4. ** keep the skill short, and do not over extend if not needed, for example do not make `C` to `C Programming Language` if you don't have a good reason.
-5. ** skills should not be repetative, like no need to include both `Data Processing & Analysis` and `Database Management`
-- **Job Description:**  
-{summarized_job_description}
-- **My skills**:  
-  {skills} 
-- **Template to Use**
-The response should be in json array format without any extra information at most 10 skills sorted with degree of importance
-like ["Java", "Kotlin"]
+Your task is to analyze my professional profile and a target job description to generate a categorized list of my most relevant technical skills. The goal is to highlight the best-matching skills in a format that is both human-readable and ATS-optimized.
+
+### Core Rules:
+1.  **Analyze All Inputs**: Synthesize information from my `profile_summary`, my `skills` list, and the `job_description` to get a complete picture.
+2.  **Categorize Logically**: Group the skills into logical, professional categories such as "Languages," "Platforms," "Databases," "Frameworks," "Tools," or "Concepts."
+3.  **Strict Category Limit**: You must generate **3 to 4 categories** in total. Do not create more than 4.
+4.  **Prioritize and Sort**: The final output should be sorted by importance. The most relevant category to the job should appear first, and the skills within each category should also be sorted by their relevance.
+5.  **No Fabrication**: Only list skills that can be inferred from my profile and skills list. Do not invent skills I don't have, even if they are in the job description.
+6.  **Keyword Matching**: Where appropriate, adjust the wording of my skills to match the terminology used in the job description for better ATS compatibility (e.g., use "Cloud Computing" if the job lists it, instead of "Cloud Platforms").
+7.  **Be Concise and Unique**: Keep skill names brief (e.g., "C++" not "C++ Programming Language"). Do not list redundant skills (e.g., choose one between "Data Analysis" and "Data Processing" if they represent the same core skill in this context).
+8.  **Technical Skills Only**: Do not include soft skills like "Communication," "Teamwork," or "Leadership."
+
+---
+### Inputs:
+-   **My Profile Summary:**
+    {my_profile_summary}
+-   **My Skills List:**
+    {skills}
+-   **Job Description:**
+    {summarized_job_description}
+
+---
+### Output Format:
+Your response **must** be a single clean JSON object. Do not include any text, explanations, or markdown formatting before or after the JSON.
+
+**Example of the required JSON structure:**
+{{
+    "Platforms": ["AWS", "Google Cloud Platform (GCP)", "Android Development"],
+    "Languages": ["Python", "C++", "SQL", "NoSQL"],
+    "Concepts": ["Backend Engineering", "REST API", "Database Management"]
+}}
 """
 
 summary_prompt = """
@@ -28,6 +45,7 @@ You are a high-precision information extraction engine. Your sole purpose is to 
 - **`technical_skills`**: List all specific technologies, programming languages, frameworks, methodologies (e.g., Agile), and software mentioned.
 - **`core_responsibilities`**: List the primary duties and actions the candidate will perform in the role.
 - **`qualifications_and_preferences`**: List required or preferred experience, educational background, and other qualifications (e.g., "5+ years of experience," "B.S. in Computer Science," "experience in the financial sector").
+- **`keywords`**: A prioritized list of the most important keywords/phrases for highlighting. Each item must be an object with fields {{"keyword": string, "importance": integer from 1 to 5}}, where 5 is most important. Use exact keywords from the text.
 
 ### Output Format:
 Provide the output as a single, clean JSON object. Do not include any explanatory text before or after the JSON block.
@@ -52,7 +70,7 @@ Act as an HR expert and resume writer with a specialization in creating ATS-frie
 1. Select the most relevant projects from the provided list for the specified job role.
 2. Generate concise, impactful bullet points for each selected project that highlight achievements, skills, and responsibilities.
  For each project, we have Project Name, position or rule, period, location and description.
- 
+
  Use the following rules:
 - Select at least 2 projects that best match the job description in terms of relevance, required skills, and impact.
 - Write 2-3 bullet points for each selected project, focusing on quantifiable achievements and technologies used.
@@ -98,27 +116,21 @@ Your process must follow these core principles:
 
 ### Generation Process:
 
-1.  **Identify the Core Value Proposition:** Analyze the `Job Description` to identify the top 1-2 most critical needs of the employer (e.g., "scaling infrastructure," "leading cross-functional projects," "improving data pipeline efficiency").
-2.  **Extract Quantifiable Achievements:** Scour `My CV` for the most powerful, metrics-driven achievements that directly correspond to the employer's needs identified in Step 1. Look for percentages, dollar amounts, user numbers, or time saved.
-3.  **Synthesize the Narrative:** Write a single, dense paragraph that tells a compelling story of the candidate's value.
-    * **Sentence 1:** Start with the professional title, years of experience, and a high-level summary of their core expertise, directly mirroring the language in the job description (e.g., "A results-driven Senior Cloud Architect with 8+ years of experience...").
-    * **Sentence 2-3:** Seamlessly weave in the top 1-2 *quantifiable achievements* you extracted. Frame them as proof of expertise. For example, instead of saying "experienced in cost optimization," say "proven ability to reduce cloud infrastructure costs, achieving a 25% decrease in annual spending through strategic refactoring."
-    * **Sentence 4:** Conclude with a concise, forward-looking statement that connects the candidate's skills to the company's goals. For example: "Eager to apply expertise in scalable systems to build the next generation of [Company's Product/Mission from JD]."
-
-### Strict Constraints:
-
-* **Output Format:** A single paragraph only. **Do not use bullet points.**
-* **Tone:** The tone must be confident, professional, and data-driven.
-* **Length:** The final paragraph **must be between 3-5 sentences and approximately 60-80 words.**
+1.  **Analyze Inputs:** Thoroughly analyze the `Job Description` to identify the most critical qualifications. Simultaneously, review `My CV` to find the strongest corresponding achievements and skills.
+2.  **Craft the Summary:** Write a single, dense paragraph that powerfully introduces the candidate.
+    * It should start by stating the candidate's professional title and years of experience.
+    * It must seamlessly weave in the top 2-3 skills or achievements that are most relevant to the job description (e.g., "architecting a cloud gaming platform," "AWS serverless architecture," "Android SDK").
+    * Mention top-tier, relevant certifications if applicable.
+3.  **Apply Strict Constraints:**
+    * **Output Format:** A single paragraph only. **Do not use bullet points.**
+    * **Length:** The final paragraph **must be between 2-4 sentences and strictly under 60 words.**
 
 ### Input Data:
-
 - **Job Description**:
 {job_description}
 
 - **Years of experience and other info**:
 {personal}
-
 - **My CV**:
 {cv}
 
@@ -149,9 +161,6 @@ For **each individual job entry** provided in `My Information`, perform the foll
 - After sorting by relevance in Step 2, you **must select only the top 4 most relevant bullet points** for the final output.
 - **This is a strict rule** to ensure the final document is concise and fits a single page. Discard all other bullet points for that job entry.
 
-**Step 4: Curate a Focused Skill List**
-- From the `skills_acquired` list for the job, create a curated, comma-separated string of the **5-7 most impactful skills** that are most relevant to the `Job Description`.
-
 ### Input Data:
 
 - **My Information:**
@@ -169,8 +178,7 @@ Provide a single JSON array, where each object represents a processed job entry 
         "Most relevant bullet point 1 (aligned with JD)",
         "Most relevant bullet point 2 (aligned with JD)",
         "Less relevant but valuable bullet point 3"
-      ],
-      "skills": "Key Skill from JD, Another Key Skill, Highly Relevant Skill 1, Highly Relevant Skill 2"
+      ]
     }
 ]
 """
@@ -201,16 +209,4 @@ should only include the summarized text, no additional explanation.
 
 {cv_dictionary}
 
-"""
-job_title_prompt = """
-base on the job description and my profile give a title for my cv, that have the best match if there is no good match 
-with my skill give a more general title like `Software Engineer`
-
-
-Job Summary:
-{job_summary}
-cv Summary:
-{cv_summary}
-### Output Format:
-should only include the job title and nothing else and extra.
 """

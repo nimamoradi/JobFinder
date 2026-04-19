@@ -1,0 +1,10 @@
+### Professional Profile & Capabilities
+Software Engineer with experience in cloud architecture and backend systems.
+
+### Education & Research Highlights
+Master of Science, Computer Science
+Thesis: Research on Distributed Systems.
+
+### Core Technical Skills
+Cloud & DevOps: AWS, GCP
+Backend Engineering: Python, Java
